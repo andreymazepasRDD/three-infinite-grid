@@ -62,7 +62,8 @@
   },
   "dependencies": {
     "lil-gui": "^0.19.2",
-    "three": "^0.163.0"
+    "three": "^0.163.0",
+    "three-viewport-gizmo": "^2.2.0"
   },
   "peerDependencies": {
     "three": "^0.163.0"

@@ -18,6 +18,7 @@ import {
 } from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { TeapotGeometry } from "three/examples/jsm/geometries/TeapotGeometry.js";
+import { ViewportGizmo, type GizmoOptions } from "three-viewport-gizmo";
 import ThreeInfiniteGrid from "../lib/three-infinite-grid";
 import GUI from "lil-gui";
 
@@ -47,6 +48,39 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     planeXZ: "XZ",
     planeXY: "XY",
     planeZY: "ZY",
+
+    roundedCubeGizmo: "Rounded Cube Gizmo",
+    gizmoFaceColor: "Face Color",
+    gizmoEdgeColor: "Edge Color",
+    gizmoCornerColor: "Corner Color",
+    gizmoHoverColor: "Hover Color",
+    gizmoLabelColor: "Label Color",
+
+    sphereGizmo: "Sphere Gizmo",
+    gizmoPlacement: "Placement",
+    gizmoSize: "Size",
+    gizmoAnimated: "Animated",
+    gizmoSpeed: "Speed",
+    gizmoResolution: "Resolution",
+    gizmoOffset: "Offset",
+    gizmoBackground: "Background",
+    gizmoBackgroundOpacity: "Background Opacity",
+    gizmoBackgroundHover: "Background (Hover)",
+    gizmoBackgroundHoverOpacity: "Background Hover Opacity",
+    gizmoLineWidth: "Line Width",
+
+    gizmoRightLabel: "Right",
+    gizmoLeftLabel: "Left",
+    gizmoTopLabel: "Top",
+    gizmoBottomLabel: "Bottom",
+    gizmoFrontLabel: "Front",
+    gizmoBackLabel: "Back",
+    gizmoPosXLabel: "+X",
+    gizmoNegXLabel: "-X",
+    gizmoPosYLabel: "+Y",
+    gizmoNegYLabel: "-Y",
+    gizmoPosZLabel: "+Z",
+    gizmoNegZLabel: "-Z",
   },
   JP: {
     background: "背景",
@@ -71,6 +105,39 @@ const STRINGS: Record<Lang, Record<string, string>> = {
     planeXZ: "XZ",
     planeXY: "XY",
     planeZY: "ZY",
+
+    roundedCubeGizmo: "角丸キューブ（Gizmo）",
+    gizmoFaceColor: "面の色",
+    gizmoEdgeColor: "エッジの色",
+    gizmoCornerColor: "コーナーの色",
+    gizmoHoverColor: "ホバー時の色",
+    gizmoLabelColor: "ラベルの色",
+
+    sphereGizmo: "球体（Gizmo）",
+    gizmoPlacement: "配置",
+    gizmoSize: "サイズ",
+    gizmoAnimated: "アニメーション",
+    gizmoSpeed: "速度",
+    gizmoResolution: "解像度",
+    gizmoOffset: "オフセット",
+    gizmoBackground: "背景",
+    gizmoBackgroundOpacity: "背景の不透明度",
+    gizmoBackgroundHover: "背景（ホバー）",
+    gizmoBackgroundHoverOpacity: "背景ホバーの不透明度",
+    gizmoLineWidth: "線の太さ",
+
+    gizmoRightLabel: "右",
+    gizmoLeftLabel: "左",
+    gizmoTopLabel: "上",
+    gizmoBottomLabel: "下",
+    gizmoFrontLabel: "前",
+    gizmoBackLabel: "後",
+    gizmoPosXLabel: "+X",
+    gizmoNegXLabel: "-X",
+    gizmoPosYLabel: "+Y",
+    gizmoNegYLabel: "-Y",
+    gizmoPosZLabel: "+Z",
+    gizmoNegZLabel: "-Z",
   },
 };
 
@@ -99,12 +166,14 @@ const camera = new PerspectiveCamera(
   0.01,
   4000,
 );
-camera.position.set(10, 10, 10);
+camera.up.set(0, 0, 1);
+camera.position.set(14, 14, 14);
 
 scene.add(camera);
 
 //#region Renderer setup
 const renderer = new WebGLRenderer();
+const gizmos: ViewportGizmo[] = [];
 const rendererSettings = {
   backgroundColor: "rgba(51, 51, 51, 1)",
 };
@@ -116,6 +185,10 @@ const handleResize = () => {
 
   camera.aspect = document.body.offsetWidth / document.body.offsetHeight;
   camera.updateProjectionMatrix();
+
+  for (const gizmo of gizmos) {
+    gizmo.update();
+  }
 };
 
 handleResize();
@@ -127,6 +200,8 @@ document.body.append(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+controls.target.set(0, 0, 2);
+controls.update();
 
 const ambientLight = new AmbientLight(new Color("#ffffff"), 1.5);
 const directionalLight = new DirectionalLight(new Color("#ffffff"), 1.5);
@@ -163,12 +238,140 @@ const teapot = new Mesh(
 teapot.position.set(0, 0, 4);
 // TeapotGeometry is authored for Y-up; rotate so it stands in Z-up
 teapot.rotation.x = Math.PI / 2;
-teapot.rotation.z = Math.PI / 6;
+//teapot.rotation.z = Math.PI / 6;
 scene.add(teapot);
 
 // With Z-up, the floor is the XY plane (z = 0)
 const grid = new ThreeInfiniteGrid({ plane: 1 });
 scene.add(grid);
+
+// Viewport gizmos (sphere, cube, rounded cube) connected to OrbitControls
+const sphereGizmoSettings = {
+  backgroundColor: "#2b2b2b",
+  backgroundOpacity: 0.35,
+  backgroundHoverColor: "#3a3a3a",
+  backgroundHoverOpacity: 0.55,
+  lineWidth: 2,
+  labelColor: "#ffffff",
+  hoverColor: "#4bac84",
+  xColor: "#ff3653",
+  yColor: "#28d16f",
+  zColor: "#2c7dff",
+  nxColor: "#a32030",
+  nyColor: "#1b7f42",
+  nzColor: "#1a4fa8",
+};
+
+const buildSphereGizmoOptions = () => {
+  const axis = (label: string, color: string) => ({
+    //label,
+    color,
+    labelColor: sphereGizmoSettings.labelColor,
+    line: true,
+    hover: {
+      color: sphereGizmoSettings.hoverColor,
+      labelColor: sphereGizmoSettings.labelColor,
+    },
+  });
+
+  return {
+    container: document.body,
+    type: "sphere",
+    placement: "bottom-right",
+    lineWidth: sphereGizmoSettings.lineWidth,
+    background: {
+      enabled: true,
+      color: sphereGizmoSettings.backgroundColor,
+      opacity: sphereGizmoSettings.backgroundOpacity,
+      hover: {
+        color: sphereGizmoSettings.backgroundHoverColor,
+        opacity: sphereGizmoSettings.backgroundHoverOpacity,
+      },
+    },
+    x: axis(t("gizmoPosXLabel"), sphereGizmoSettings.xColor),
+    y: axis(t("gizmoPosYLabel"), sphereGizmoSettings.yColor),
+    z: axis(t("gizmoPosZLabel"), sphereGizmoSettings.zColor),
+    nx: axis(t("gizmoNegXLabel"), sphereGizmoSettings.nxColor),
+    ny: axis(t("gizmoNegYLabel"), sphereGizmoSettings.nyColor),
+    nz: axis(t("gizmoNegZLabel"), sphereGizmoSettings.nzColor),
+  };
+};
+
+const gizmoSphere = new ViewportGizmo(camera, renderer, buildSphereGizmoOptions());
+gizmoSphere.attachControls(controls);
+
+const applySphereGizmoOptions = () => {
+  gizmoSphere.set(buildSphereGizmoOptions());
+  gizmoSphere.attachControls(controls);
+  gizmoSphere.update();
+};
+
+const roundedCubeGizmoSettings = {
+  faceColor: "#444444",
+  edgeColor: "#555555",
+  cornerColor: "#444444",
+  hoverColor: "#4bac84",
+  labelColor: "#ffffff",
+};
+
+const buildRoundedCubeGizmoOptions = () => {
+  const faceConfig = {
+    color: roundedCubeGizmoSettings.faceColor,
+    labelColor: roundedCubeGizmoSettings.labelColor,
+    hover: {
+      color: roundedCubeGizmoSettings.hoverColor,
+    },
+  };
+  const edgeConfig = {
+    color: roundedCubeGizmoSettings.edgeColor,
+    opacity: 1,
+    hover: {
+      color: roundedCubeGizmoSettings.hoverColor,
+    },
+  };
+  const cornerConfig = {
+    ...faceConfig,
+    color: roundedCubeGizmoSettings.cornerColor,
+    hover: {
+      color: roundedCubeGizmoSettings.hoverColor,
+    },
+  };
+
+  return {
+    container: document.body,
+    // NOTE: this library supports "rounded-cube" at runtime (even if typings only mention sphere/cube)
+    type: "rounded-cube",
+    placement: "bottom-center",
+    corners: cornerConfig,
+    edges: edgeConfig,
+    right: { ...faceConfig,  },
+    top: { ...faceConfig,  },
+    front: { ...faceConfig, },
+    left: { ...faceConfig,  },
+    bottom: { ...faceConfig,  },
+    back: { ...faceConfig,  },
+  };
+};
+
+// Rounded cube = cube gizmo with increased corner/edge rounding
+const gizmoRoundedCube = new ViewportGizmo(
+  camera,
+  renderer,
+  buildRoundedCubeGizmoOptions() as never,
+);
+gizmoRoundedCube.attachControls(controls);
+
+const applyRoundedCubeGizmoOptions = () => {
+  gizmoRoundedCube.set(buildRoundedCubeGizmoOptions() as never);
+  gizmoRoundedCube.attachControls(controls);
+  gizmoRoundedCube.update();
+};
+
+gizmos.push(gizmoSphere, gizmoRoundedCube);
+
+for (const gizmo of gizmos) {
+  gizmo.update();
+}
 
 // 3D axis helper that reuses the grid's axis colors + axisLineWidth
 const axisLength = 1000;
@@ -212,6 +415,67 @@ gui
 //  .add(grid, "plane")
 //  .name(t("gridPlane"))
 //  .options({ [t("planeXZ")]: 0, [t("planeXY")]: 1, [t("planeZY")]: 2 });
+
+// const sphereGizmoFolder = gui.addFolder(t("sphereGizmo"));
+// sphereGizmoFolder
+//   .addColor(sphereGizmoSettings, "backgroundColor")
+//   .name(t("gizmoBackground"))
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .add(sphereGizmoSettings, "backgroundOpacity")
+//   .name(t("gizmoBackgroundOpacity"))
+//   .min(0)
+//   .max(1)
+//   .step(0.01)
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .addColor(sphereGizmoSettings, "backgroundHoverColor")
+//   .name(t("gizmoBackgroundHover"))
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .add(sphereGizmoSettings, "backgroundHoverOpacity")
+//   .name(t("gizmoBackgroundHoverOpacity"))
+//   .min(0)
+//   .max(1)
+//   .step(0.01)
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .add(sphereGizmoSettings, "lineWidth")
+//   .name(t("gizmoLineWidth"))
+//   .min(0)
+//   .max(10)
+//   .step(0.1)
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .addColor(sphereGizmoSettings, "labelColor")
+//   .name(t("gizmoLabelColor"))
+//   .onChange(applySphereGizmoOptions);
+// sphereGizmoFolder
+//   .addColor(sphereGizmoSettings, "hoverColor")
+//   .name(t("gizmoHoverColor"))
+//   .onChange(applySphereGizmoOptions);
+
+// const roundedCubeFolder = gui.addFolder(t("roundedCubeGizmo"));
+// roundedCubeFolder
+//   .addColor(roundedCubeGizmoSettings, "faceColor")
+//   .name(t("gizmoFaceColor"))
+//   .onChange(applyRoundedCubeGizmoOptions);
+// roundedCubeFolder
+//   .addColor(roundedCubeGizmoSettings, "edgeColor")
+//   .name(t("gizmoEdgeColor"))
+//   .onChange(applyRoundedCubeGizmoOptions);
+// roundedCubeFolder
+//   .addColor(roundedCubeGizmoSettings, "cornerColor")
+//   .name(t("gizmoCornerColor"))
+//   .onChange(applyRoundedCubeGizmoOptions);
+// roundedCubeFolder
+//   .addColor(roundedCubeGizmoSettings, "hoverColor")
+//   .name(t("gizmoHoverColor"))
+//   .onChange(applyRoundedCubeGizmoOptions);
+// roundedCubeFolder
+//   .addColor(roundedCubeGizmoSettings, "labelColor")
+//   .name(t("gizmoLabelColor"))
+//   .onChange(applyRoundedCubeGizmoOptions);
 
 const sizeSettings = gui.addFolder(t("sizeSettings"));
 sizeSettings
@@ -287,6 +551,11 @@ colorSettings.add(grid, "opacity").name(t("opacity")).min(0).max(1).step(0.05).o
 
 const loop = () => {
   renderer.render(scene, camera);
+
+  for (const gizmo of gizmos) {
+    gizmo.render();
+  }
+
   if (controls.enabled) {
     controls.update();
   }

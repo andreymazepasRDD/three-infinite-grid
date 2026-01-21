@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Config - Three Viewport Gizmo Example</title>
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="../assets/three-viewport-gizmo.svg"
+    />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        background: #333;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.173.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.173.0/examples/jsm/",
+          "three-viewport-gizmo": "https://cdn.jsdelivr.net/gh/taucad/three-viewport-gizmo/dist/three-viewport-gizmo.js"
+        }
+      }
+    </script>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { ViewportGizmo } from "three-viewport-gizmo";
+      import { GUI } from "three/addons/libs/lil-gui.module.min.js";
+
+      const STRINGS = {
+        EN: {
+          scene: "Scene",
+          sceneBackground: "Background",
+          sceneGrid: "Grid",
+          placement: "Placement",
+          size: "Size",
+          animated: "Animated",
+          speed: "Speed",
+          lineWidth: "Line Width",
+          resolution: "Resolution",
+          radius: "Radius",
+          offset: "Offset",
+          top: "Top",
+          left: "Left",
+          right: "Right",
+          bottom: "Bottom",
+          font: "Font",
+          family: "Family",
+          weight: "Weight",
+          background: "Background",
+          corners: "Corners",
+          edges: "Edges",
+          enabled: "Enabled",
+          color: "Color",
+          opacity: "Opacity",
+          scale: "Scale",
+          smoothness: "Smoothness",
+          hover: "Hover",
+          label: "Label",
+          line: "Line",
+          labelColor: "Label Color",
+          border: "Border",
+          borderSize: "Size",
+          hoverBorder: "Hover Border",
+          copyOptions: "Copy Options",
+          cubeRight: "Right",
+          cubeTop: "Top",
+          cubeFront: "Front",
+          cubeLeft: "Left",
+          cubeBottom: "Bottom",
+          cubeBack: "Back",
+          axisX: "+X",
+          axisY: "+Y",
+          axisZ: "+Z",
+          axisNX: "-X",
+          axisNY: "-Y",
+          axisNZ: "-Z",
+        },
+        JP: {
+          scene: "シーン",
+          sceneBackground: "背景",
+          sceneGrid: "グリッド",
+          placement: "配置",
+          size: "サイズ",
+          animated: "アニメーション",
+          speed: "速度",
+          lineWidth: "線の太さ",
+          resolution: "解像度",
+          radius: "角丸",
+          offset: "オフセット",
+          top: "上",
+          left: "左",
+          right: "右",
+          bottom: "下",
+          font: "フォント",
+          family: "フォント名",
+          weight: "太さ",
+          background: "背景",
+          corners: "コーナー",
+          edges: "エッジ",
+          enabled: "有効",
+          color: "色",
+          opacity: "不透明度",
+          scale: "スケール",
+          smoothness: "滑らかさ",
+          hover: "ホバー",
+          label: "ラベル",
+          line: "線",
+          labelColor: "ラベル色",
+          border: "枠線",
+          borderSize: "サイズ",
+          hoverBorder: "ホバー枠線",
+          copyOptions: "オプションをコピー",
+          cubeRight: "右",
+          cubeTop: "上",
+          cubeFront: "前",
+          cubeLeft: "左",
+          cubeBottom: "下",
+          cubeBack: "後",
+          axisX: "+X",
+          axisY: "+Y",
+          axisZ: "+Z",
+          axisNX: "-X",
+          axisNY: "-Y",
+          axisNZ: "-Z",
+        },
+      };
+
+      const resolveLang = () => {
+        const query = new URLSearchParams(window.location.search);
+        const langParam = (query.get("lang") || "").toUpperCase();
+        if (langParam === "EN" || langParam === "JP") return langParam;
+        const browserLang = (navigator.language || "").toLowerCase();
+        return browserLang.startsWith("ja") ? "JP" : "EN";
+      };
+
+      const LANG = resolveLang();
+      const t = (key) => STRINGS[LANG][key] ?? key;
+
+      // Gizmo type `?type=cube`
+      const urlParams = new URLSearchParams(window.location.search);
+      const type = urlParams.get("type") || "sphere";
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x333333);
+      const gridHelper = new THREE.GridHelper(10, 10, 0x111111, 0x111111);
+      scene.add(gridHelper);
+
+      const [width, height] = [window.innerWidth, window.innerHeight];
+      const camera = new THREE.PerspectiveCamera(
+        70,
+        width / window.innerHeight,
+        0.1,
+        100
+      );
+      camera.position.set(5, 5, 5);
+      camera.lookAt(scene.position);
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(width, height);
+      renderer.setAnimationLoop(animation);
+      document.body.appendChild(renderer.domElement);
+
+      let gizmo = new ViewportGizmo(camera, renderer, {
+        type,
+        size: Math.round(Math.min(width, height) * 0.8),
+        placement: "center-center",
+      });
+
+      initGUI();
+
+      function animation(time) {
+        renderer.render(scene, camera);
+
+        // Render the Gizmo
+        gizmo.render();
+      }
+
+      window.onresize = () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        // Update the Gizmo on Resize
+        gizmo.update();
+      };
+
+      function initGUI() {
+        const gui = new GUI();
+
+        const options = gizmo._options;
+
+        const sceneOptions = {
+          background: "#333333",
+          grid: true,
+        };
+
+        const scene = gui.addFolder(t("scene"));
+        scene.addColor(sceneOptions, "background").name(t("sceneBackground"));
+        scene.add(sceneOptions, "grid").name(t("sceneGrid"));
+
+        gui.add(options, "placement", [
+          "top-left",
+          "top-right",
+          "top-center",
+          "center-right",
+          "center-left",
+          "center-center",
+          "bottom-left",
+          "bottom-right",
+          "bottom-center",
+        ]).name(t("placement"));
+        gui.add(options, "size", 64, 2048, 1).name(t("size"));
+        gui.add(options, "animated").name(t("animated"));
+        gui.add(options, "speed", 0.1, 6, 0.1).name(t("speed"));
+        gui.add(options, "lineWidth", 1, 100).name(t("lineWidth"));
+        gui.add(options, "resolution", 64, 256, 1).name(t("resolution"));
+        gui.add(options, "radius", 0, 1, 0.01).name(t("radius"));
+
+        const offset = gui.addFolder(t("offset")).close();
+        const optionsOffset = options.offset;
+        offset.add(optionsOffset, "top", 0, 50, 1).name(t("top"));
+        offset.add(optionsOffset, "left", 0, 50, 1).name(t("left"));
+        offset.add(optionsOffset, "right", 0, 50, 1).name(t("right"));
+        offset.add(optionsOffset, "bottom", 0, 50, 1).name(t("bottom"));
+
+        const font = gui.addFolder(t("font")).close();
+        const fontOptions = options.font;
+        font.add(fontOptions, "family").name(t("family"));
+        font.add(
+          fontOptions,
+          "weight",
+          [100, 200, 300, 400, 500, 600, 700, 800, 900]
+        ).name(t("weight"));
+
+        ["background", "corners", "edges"].forEach((param) => {
+          const isBackground = param === "background";
+          const folder = gui.addFolder(t(param)).close();
+          const config = options[param];
+
+          folder.add(config, "enabled").name(t("enabled"));
+          folder.addColor(config, "color").name(t("color"));
+          folder.add(config, "opacity", 0, 1, 0.01).name(t("opacity"));
+
+          if (!isBackground) {
+            folder.add(config, "scale", 0, 1, 0.1).name(t("scale"));
+            folder.add(config, "radius", 0, 1, 0.01).name(t("radius"));
+            folder.add(config, "smoothness", 0, 32, 0.01).name(t("smoothness"));
+          }
+
+          const hoverFolder = folder.addFolder(t("hover")).close();
+          hoverFolder.addColor(config.hover, "color").name(t("color"));
+          hoverFolder.add(config.hover, "opacity", 0, 1, 0.01).name(t("opacity"));
+
+          if (!isBackground)
+            hoverFolder.add(config.hover, "scale", 0, 1, 0.01).name(t("scale"));
+        });
+
+        const cubeFaces = ["right", "top", "front", "left", "bottom", "back"];
+        const sphereAxes = ["x", "y", "z", "nx", "ny", "nz"];
+
+        const cubeFaceLabels = [
+          t("cubeRight"),
+          t("cubeTop"),
+          t("cubeFront"),
+          t("cubeLeft"),
+          t("cubeBottom"),
+          t("cubeBack"),
+        ];
+        const sphereAxisLabels = [
+          t("axisX"),
+          t("axisY"),
+          t("axisZ"),
+          t("axisNX"),
+          t("axisNY"),
+          t("axisNZ"),
+        ];
+
+        const names = type === "sphere" ? sphereAxisLabels : cubeFaceLabels;
+
+        sphereAxes.forEach((key, i) => {
+          const axisFolder = gui.addFolder(names[i]).close();
+          const axis = options[key];
+
+          axisFolder.add(axis, "label").name(t("label"));
+          axisFolder.add(axis, "opacity", 0, 1, 0.01).name(t("opacity"));
+          axisFolder.add(axis, "scale", 0, 1, 0.01).name(t("scale"));
+          axisFolder.add(axis, "line").name(t("line"));
+          axisFolder.addColor(axis, "color").name(t("color"));
+          axisFolder.addColor(axis, "labelColor").name(t("labelColor"));
+
+          const border = axisFolder.addFolder(t("border")).close();
+          const borderConfig = axis.border;
+          border.add(borderConfig, "size", 0, 1, 0.1).name(t("borderSize"));
+          border.addColor(borderConfig, "color").name(t("color"));
+
+          const axisHover = axisFolder.addFolder(t("hover")).close();
+          const hoverConfig = axis.hover;
+          axisHover.add(hoverConfig, "opacity", 0, 1, 0.01).name(t("opacity"));
+          axisHover.add(hoverConfig, "scale", 0, 1, 0.01).name(t("scale"));
+          axisHover.addColor(hoverConfig, "color").name(t("color"));
+          axisHover.addColor(hoverConfig, "labelColor").name(t("labelColor"));
+
+          const hoverBorder = axisHover.addFolder(t("hoverBorder")).close();
+          const hoverBorderConfig = hoverConfig.border;
+          hoverBorder.add(hoverBorderConfig, "size", 0, 1, 0.01).name(t("borderSize"));
+          hoverBorder.addColor(hoverBorderConfig, "color").name(t("color"));
+        });
+
+        gui.add({ copyOptions }, "copyOptions").name(t("copyOptions"));
+
+        gui.onChange(() => {
+          options.container = "body";
+          onGUIUpdate(options, sceneOptions);
+        });
+
+        function copyOptions() {
+          const jsonText = JSON.stringify(options, null, 2);
+
+          navigator.clipboard
+            .writeText(jsonText)
+            .then(function () {
+              console.log("Options copied to clipboard:");
+              console.log(jsonText);
+            })
+            .catch(function (error) {
+              console.error("Error copying Options to clipboard:", error);
+            });
+        }
+      }
+
+      function onGUIUpdate(options, params) {
+        const target = gizmo.target;
+        gizmo.dispose();
+        gizmo = new ViewportGizmo(camera, renderer, options);
+        gizmo.target = target;
+
+        gridHelper.visible = params.grid;
+        scene.background.set(params.background);
+      }
+    </script>
+  </body>
+</html>
