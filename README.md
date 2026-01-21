@@ -37,9 +37,15 @@ const grid = new ThreeInfiniteGrid({
   yAxisColor: new Color("#00ff00"),
   zAxisColor: new Color("#0000ff"),
   centerColor: new Color("#ffff00"),
+  showXAxis: true,
+  showYAxis: true,
+  showZAxis: true,
   opacity: 1,
 });
 scene.add(grid);
+
+// Background color is controlled by the renderer clear color
+renderer.setClearColor(new Color("#ffffff"));
 ```
 
 To make it actually "infinite" move the grid object after `orbitControls.target`, e.g:

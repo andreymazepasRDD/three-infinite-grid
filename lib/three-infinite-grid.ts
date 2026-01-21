@@ -29,6 +29,9 @@ export type ThreeInfiniteGridOptions = {
   yAxisColor: ColorRepresentation;
   zAxisColor: ColorRepresentation;
   centerColor: ColorRepresentation;
+  showXAxis: boolean;
+  showYAxis: boolean;
+  showZAxis: boolean;
   opacity: number;
 };
 
@@ -38,14 +41,17 @@ export const DEFAULT_SETTINGS = {
   scale: 1,
   majorGridFactor: 10,
   minorLineWidth: 0.01,
-  majorLineWidth: 0.015,
+  majorLineWidth: 0.035,
   axisLineWidth: 0.05,
-  minorLineColor: new Color("#000000"),
-  majorLineColor: new Color("#000000"),
+  minorLineColor: new Color("#ffffffff"),
+  majorLineColor: new Color("#ffffffff"),
   xAxisColor: new Color("#ff0000"),
   yAxisColor: new Color("#00ff00"),
   zAxisColor: new Color("#0000ff"),
   centerColor: new Color("#ffff00"),
+  showXAxis: true,
+  showYAxis: true,
+  showZAxis: true,
   opacity: 1,
 };
 
@@ -70,7 +76,10 @@ export class ThreeInfiniteGrid extends Object3D {
     (Object.keys(_settings) as Array<keyof ThreeInfiniteGridOptions>).forEach(
       (propKey) => {
         const uniformKey = `u${propKey.charAt(0).toUpperCase()}${propKey.slice(1)}`;
-        _uniforms[uniformKey] = { value: _settings[propKey] };
+        const value = _settings[propKey];
+        _uniforms[uniformKey] = {
+          value: typeof value === "boolean" ? (value ? 1 : 0) : value,
+        };
       },
     );
 
@@ -175,6 +184,27 @@ export class ThreeInfiniteGrid extends Object3D {
   }
   public get centerColor() {
     return this._material.uniforms.uCenterColor.value;
+  }
+
+  public set showXAxis(value: boolean) {
+    this._material.uniforms.uShowXAxis.value = value ? 1 : 0;
+  }
+  public get showXAxis() {
+    return this._material.uniforms.uShowXAxis.value === 1;
+  }
+
+  public set showYAxis(value: boolean) {
+    this._material.uniforms.uShowYAxis.value = value ? 1 : 0;
+  }
+  public get showYAxis() {
+    return this._material.uniforms.uShowYAxis.value === 1;
+  }
+
+  public set showZAxis(value: boolean) {
+    this._material.uniforms.uShowZAxis.value = value ? 1 : 0;
+  }
+  public get showZAxis() {
+    return this._material.uniforms.uShowZAxis.value === 1;
   }
 
   public set opacity(value: number) {

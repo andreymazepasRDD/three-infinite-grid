@@ -17,6 +17,10 @@ uniform vec3 uYAxisColor;
 uniform vec3 uZAxisColor;
 uniform vec3 uCenterColor;
 
+uniform float uShowXAxis;
+uniform float uShowYAxis;
+uniform float uShowZAxis;
+
 uniform float uOpacity;
 
 #define XZ_PLANE 0
@@ -40,6 +44,20 @@ vec4 PristineGrid(vec4 uv)
     vec2 axisLineAA = uvDeriv * 1.5;
     vec2 axisLines2 = smoothstep(axisDrawWidth + axisLineAA, axisDrawWidth - axisLineAA, abs(uv.zw * 2.0));
     axisLines2 *= saturate(axisLineWidth / axisDrawWidth);
+
+    // axis visibility (a-axis is axisLines2.x, b-axis is axisLines2.y)
+    float aAxisVisible = uShowXAxis;
+    float bAxisVisible = uShowZAxis;
+    if(uPlane == XY_PLANE){
+        aAxisVisible = uShowXAxis;
+        bAxisVisible = uShowYAxis;
+    }
+    if(uPlane == ZY_PLANE){
+        aAxisVisible = uShowZAxis;
+        bAxisVisible = uShowYAxis;
+    }
+    axisLines2.x *= aAxisVisible;
+    axisLines2.y *= bAxisVisible;
 
     //major grid
     float majorDiv = max(0.1, majorGridSize);
