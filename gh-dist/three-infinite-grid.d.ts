@@ -1,5 +1,5 @@
-import { PLANE } from './utils';
 import { BufferGeometry, Color, ColorRepresentation, InstancedMesh, Object3D, Vector2 } from 'three';
+import { PLANE } from './utils';
 
 export type ThreeInfiniteGridOptions = {
     chunks: Vector2;
@@ -15,6 +15,9 @@ export type ThreeInfiniteGridOptions = {
     yAxisColor: ColorRepresentation;
     zAxisColor: ColorRepresentation;
     centerColor: ColorRepresentation;
+    showXAxis: boolean;
+    showYAxis: boolean;
+    showZAxis: boolean;
     opacity: number;
 };
 export declare const DEFAULT_SETTINGS: {
@@ -31,6 +34,9 @@ export declare const DEFAULT_SETTINGS: {
     yAxisColor: Color;
     zAxisColor: Color;
     centerColor: Color;
+    showXAxis: boolean;
+    showYAxis: boolean;
+    showZAxis: boolean;
     opacity: number;
 };
 export declare class ThreeInfiniteGrid extends Object3D {
@@ -63,6 +69,12 @@ export declare class ThreeInfiniteGrid extends Object3D {
     get zAxisColor(): ColorRepresentation;
     set centerColor(value: ColorRepresentation);
     get centerColor(): ColorRepresentation;
+    set showXAxis(value: boolean);
+    get showXAxis(): boolean;
+    set showYAxis(value: boolean);
+    get showYAxis(): boolean;
+    set showZAxis(value: boolean);
+    get showZAxis(): boolean;
     set opacity(value: number);
     get opacity(): number;
 }
